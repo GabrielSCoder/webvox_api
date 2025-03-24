@@ -14,7 +14,7 @@ app.use(cors({...corsConfig}))
 app.use(express.json());
 app.use(cookieParser())
 
-socketConfiguration(server)
+// socketConfiguration(server)
 
 app.use(mainRouter)
 
