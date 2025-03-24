@@ -1,6 +1,7 @@
 import { Sequelize, where } from "sequelize"
 import { feedFilterDTO, getPostForm, postCreateDTO, postDTO, postFilterDTO, postForm, postListDTO, reactPostForm, replyFilterDtO, responsePostFilterDTO } from "../types/postT"
 import { error } from "console"
+import { createNotification } from "./notification"
 
 const { Post, Usuario, PostReaction } = require("../models")
 
@@ -51,25 +52,25 @@ const convertToDTO = async (data: postForm) => {
     return item
 }
 
-export const getById = async (data : getPostForm) => {
+export const getById = async (data: getPostForm) => {
 
     const likedLiteral = data.profile_id
-    ? [
-        [
-            Sequelize.literal(`(
+        ? [
+            [
+                Sequelize.literal(`(
                 SELECT EXISTS (
                     SELECT 1 FROM post_reaction 
                     WHERE post_reaction.post_id = "Post".id 
                     AND post_reaction.usuario_id = ${data.profile_id}
                 )
             )`),
-            "liked"
+                "liked"
+            ]
         ]
-    ]
-    : [];
+        : [];
 
     const resp = await Post.findOne({
-        where: { id : data.id },
+        where: { id: data.id },
         include: [{ model: PostReaction, as: "reactions", attributes: [] }],
         attributes: {
             include: [
@@ -246,8 +247,8 @@ export const getRepliesByPostId = async (data: replyFilterDtO) => {
                             `(SELECT COUNT(*) FROM post_reaction WHERE post_reaction.post_id = "Post".id)`
                         ),
                         "INTEGER"
-                    ),"total_reactions"
-                    
+                    ), "total_reactions"
+
                 ],
                 ...likedLiteral // Inclui apenas se profile_id existir
             ]
@@ -270,7 +271,7 @@ export const getRepliesByPostId = async (data: replyFilterDtO) => {
                                 ),
                                 "INTEGER"
                             ), "total_reactions"
-                            
+
                         ],
                         ...likedLiteral // Inclui apenas se profile_id existir
                     ]
@@ -292,9 +293,9 @@ export const getRepliesByPostId = async (data: replyFilterDtO) => {
                                         Sequelize.literal(
                                             `(SELECT COUNT(*) FROM post_reaction WHERE post_reaction.post_id = replies.id)`
                                         ),
-                                       "INTEGER"
-                                    ),  "total_reactions"
-                                    
+                                        "INTEGER"
+                                    ), "total_reactions"
+
                                 ],
                                 ...likedLiteral // Inclui apenas se profile_id existir
                             ]
@@ -332,7 +333,17 @@ export const ReactToPost = async (data: reactPostForm) => {
             if (!checkReact) {
                 const create = await PostReaction.create({ ...data, data_criacao: Date.now() })
 
-                if (create) return { liked: true }
+                if (create) {
+                    
+                    await createNotification({
+                        tipo: "like",
+                        usuario_destino: data.profile_id,
+                        post_id: data.post_id,
+                        usuario_id: data.usuario_id
+                    });
+
+                    return { liked: true }
+                }
 
                 throw new Error("erro interno")
 
@@ -388,8 +399,8 @@ export const getUserPostsWithReactions = async (data: { authorId: number, userId
                         Sequelize.literal(`
                             (SELECT COUNT(*) FROM post WHERE post.parent_id = "Post".id)
                         `),
-                       "INTEGER"
-                    ),  'total_replies'
+                        "INTEGER"
+                    ), 'total_replies'
                 ],
                 [
                     Sequelize.literal(`
@@ -516,7 +527,7 @@ export const feedMk2 = async (filter: feedFilterDTO) => {
             {
                 model: Usuario,
                 as: "usuario",
-                attributes: ["id","nome", "username", "img_url", "data_criacao"]
+                attributes: ["id", "nome", "username", "img_url", "data_criacao"]
             }
         ],
         order: Sequelize.literal("random()"),

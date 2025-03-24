@@ -135,13 +135,15 @@ export const logout = async (req: any, res: any) => {
     const authHeader = req.headers['authorization'];
     const hmac = req.headers["hmac"];
     const fingerPrint = req.cookies.riptn;
+    const ssid = req.cookies.rfssid
     const token = authHeader.split(' ')[1];
 
     try {
 
-        const decodedRefresh = jwt.verify(token, process.env.ACCESS_SECRET as string);
+        const decodedRefresh = jwt.verify(ssid, process.env.REFRESH_SECRET as string);
+        const decodedAccess = jwt.verify(token, process.env.ACCESS_SECRET as string);
 
-        if (typeof decodedRefresh !== "object" || !decodedRefresh.id) {
+        if (typeof decodedRefresh !== "object" || !decodedRefresh.id || typeof decodedAccess !== "object" || !decodedAccess.id) {
             return res.status(403).json({ error: "token inválido." });
         }
 
