@@ -1,11 +1,9 @@
 const dotenv = require("dotenv");
 dotenv.config();
 
-const front = process.env.FRONT_URL || ""
-
 export const corsConfig = {
     origin: [
-        front,
+        process.env.FRONT_URL || "",
         "http://localhost:8080",
         "http://192.168.1.13:3000",
         "http://localhost:4000",
